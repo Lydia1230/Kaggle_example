@@ -1,0 +1,66 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation
+from keras.optimizers import SGD
+
+import warnings
+
+warnings.filterwarnings('ignore')#不显示warning
+
+seed = 7
+np.random.seed(seed)
+
+train=pd.read_csv('train.csv')
+train=train.applymap(lambda x:int(x))
+X=train.drop(['label'],axis=1) #删除标签列
+
+X=X.applymap(lambda x: float(x)/255.0)
+
+y=train['label'] #标签列
+# 将数据分为训练集和测试集
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+y_train=list(y_train)
+y_test=list(y_test)
+
+batch_size = 128
+num_classes = 10
+epochs = 20
+
+
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+
+model = Sequential()
+model.add(Dense(64, activation='relu', input_dim=784))
+model.add(Dropout(0.5))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
+
+model.summary()
+
+sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='categorical_crossentropy',
+              optimizer=sgd,
+              metrics=['accuracy'])
+
+X_train=X_train.values
+X_test=X_test.values
+
+model.fit(X_train, y_train,
+          epochs=epochs,
+          batch_size=batch_size)
+score = model.evaluate(X_test, y_test, verbose=0) #返回两个值，loss+accuracy
+
+print(score)
+
+test=pd.read_csv('test.csv')
+Y=test.applymap(lambda x: float(x)/255.0)
+Y=Y.values
+predictions = model.predict_classes(Y)
+print(predictions)
