@@ -1,0 +1,46 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+
+train=pd.read_csv('train.csv')
+train=train.applymap(lambda x:int(x))
+#print(np.shape(train))
+#print(train.columns)
+
+X=train.drop(['label'],axis=1) #删除标签列
+#将灰度值变为1，其余为0
+X=X.applymap(lambda x: 1 if x>0 else 0)
+
+y=train['label'] #标签列
+# 将数据分为训练集和测试集
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+#print(y_test)
+#print(type(y_test))
+#print(y_test.shape)
+#print(y_test[5457])
+y_test=list(y_test)
+#print(y_test[0])
+
+#对X进行PCA降维
+pca=PCA(n_components=50)
+X_train_pca=pca.fit_transform(X_train)
+X_test_pca=pca.transform(X_test)
+
+clf=RandomForestClassifier(n_estimators=1000,min_samples_split=5)
+clf=clf.fit(X_train_pca,y_train)
+
+m,n=np.shape(X_test_pca)
+errorCount=0
+resultList=[]
+
+for i in range(m):
+    result=clf.predict(X_test_pca[i])
+    resultList.append(result)
+    #print(result)
+    #print(type(result))
+    #print(result[0])
+    if result[0]!=y_test[i]:errorCount+=1
+print(errorCount)
