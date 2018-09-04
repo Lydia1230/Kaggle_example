@@ -1,0 +1,83 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Conv2D, MaxPooling2D
+import matplotlib.pyplot as plt
+from keras import backend as K
+
+seed = 7
+np.random.seed(seed)
+
+img_rows, img_cols = 28, 28
+
+batch_size = 128
+num_classes = 10
+epochs = 12
+
+train = pd.read_csv('train.csv')
+X = train.drop(['label'],axis=1) #删除标签列
+
+y = train['label'] #标签列
+# 将数据分为训练集和测试集
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+x_train = x_train.values
+x_test = x_test.values
+
+if K.image_data_format() == "channels_first":
+    x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
+    x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+    input_shape = (1, img_rows, img_cols)
+else:
+    x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
+    x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+    input_shape = (img_rows, img_cols, 1)
+
+
+x_train = x_train.astype('float32')
+x_test = x_test.astype('float32')
+x_train /= 255
+x_test /= 255
+
+y_train = keras.utils.to_categorical(y_train, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
+
+'''
+plt.figure()
+img = x_test[0].reshape(28, 28)
+plt.imshow(img)
+plt.show()
+'''
+model = Sequential()
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+model.add(Conv2D(64, kernel_size=(3, 3), activation= 'relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation= 'relu'))
+model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation= 'softmax'))
+
+model.summary()
+
+model.compile(loss= 'categorical_crossentropy',
+              optimizer=keras.optimizers.Adadelta(),
+              metrics=['accuracy'])
+model.fit(x_train, y_train,
+          epochs=epochs,
+          batch_size=batch_size,
+          verbose=1,
+          validation_data=(x_test, y_test))
+score = model.evaluate(x_test, y_test, verbose=0) #返回两个值，loss+accuracy
+
+print('Test loss:', socre[0])
+print('Test accuracy:', score[1])
+
+test=pd.read_csv('test.csv')
+Y=test.applymap(lambda x: float(x)/255.0)
+Y=Y.values
+predictions = model.predict_classes(Y)
+print(predictions)
